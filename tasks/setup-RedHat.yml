@@ -24,8 +24,17 @@
   changed_when: "'Nothing to do.' not in module_disable.stdout"
   when: ansible_facts.distribution_major_version | int >= 8
 
+- name: Remove AppStream npm before installing NodeSource's bundled npm.
+  ansible.builtin.dnf:
+    name: npm
+    state: absent
+    autoremove: false
+  when: ansible_facts.distribution_major_version | int >= 8
+
 - name: Ensure Node.js and npm are installed.
   yum:
     name: "nodejs-{{ nodejs_version | regex_replace('x', '') }}*"
     state: present
     enablerepo: nodesource
+    # Allow DNF to replace conflicting AppStream dependencies during the upgrade.
+    allowerasing: "{{ true if ansible_facts.distribution_major_version | int >= 8 else omit }}"

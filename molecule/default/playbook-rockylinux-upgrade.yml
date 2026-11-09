@@ -1,0 +1,38 @@
+---
+- name: Upgrade AppStream Node.js to NodeSource
+  hosts: all
+
+  vars:
+    nodejs_version: "24.x"
+    nodejs_install_npm_user: root
+
+  pre_tasks:
+    - name: Gather installed packages.
+      ansible.builtin.package_facts:
+        manager: auto
+
+    - name: Install AppStream Node.js and npm to reproduce the upgrade conflict.
+      ansible.builtin.dnf:
+        name:
+          - nodejs
+          - npm
+        state: present
+      when: "'nodejs' not in ansible_facts.packages"
+
+  roles:
+    - role: geerlingguy.nodejs
+
+  post_tasks:
+    - name: Check Node.js version.
+      ansible.builtin.command: node --version
+      register: nodejs_installed_version
+      changed_when: false
+
+    - name: Check bundled npm works.
+      ansible.builtin.command: npm --version
+      changed_when: false
+
+    - name: Verify Node.js was upgraded to the requested major version.
+      ansible.builtin.assert:
+        that:
+          - nodejs_installed_version.stdout is match('^v24\.')
